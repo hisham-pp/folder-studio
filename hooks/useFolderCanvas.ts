@@ -3,11 +3,13 @@
  */
 
 import { useRef, useEffect } from 'react';
-import { renderFolderIcon, RenderOptions } from '@/lib/canvas/renderer';
+import { FolderConfig } from '@/types/folder';
+import { renderFolderIconToCanvas } from '@/lib/canvas/renderer';
 
 export function useFolderCanvas(
-  options: RenderOptions,
-  externalRef?: React.RefObject<HTMLCanvasElement | null>
+  config: FolderConfig,
+  externalRef?: React.RefObject<HTMLCanvasElement | null>,
+  size: number = 512
 ) {
   const internalRef = useRef<HTMLCanvasElement | null>(null);
   const canvasRef = externalRef || internalRef;
@@ -16,16 +18,11 @@ export function useFolderCanvas(
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    renderFolderIcon(canvas, options);
-  }, [
-    options.image,
-    options.title,
-    options.style,
-    options.fontWeight,
-    options.titleTextColor,
-    options.size,
-    canvasRef,
-  ]);
+    renderFolderIconToCanvas(canvas, {
+      config,
+      size,
+    });
+  }, [config, size, canvasRef]);
 
   return canvasRef;
 }

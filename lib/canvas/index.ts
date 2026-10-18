@@ -1,7 +1,3 @@
-/**
- * Canvas utilities exports
- */
-
-export * from './geometry';
-export * from './drawing';
+export * from './templates';
+export * from './emblems';
 export * from './renderer';

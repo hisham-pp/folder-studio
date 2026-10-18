@@ -5,230 +5,258 @@
 import { FolderStyle, FontWeight, ExportSize } from '@/types/folder';
 
 /**
- * Modern and Neon folder styles
+ * Curated Preset Themes for Folder Studio
  */
-export const MODERN_NEON_STYLES: FolderStyle[] = [
+export const FOLDER_STYLES: FolderStyle[] = [
+  // Windows 11 Fluent Presets
   {
-    name: "Modern Red",
-    value: "modern-red",
+    name: "Windows 11 Yellow",
+    value: "win11-yellow",
+    category: "windows",
     colors: {
-      base: "#8B1538",
-      top: "#C41E3A",
-      shadow: "rgba(139, 21, 56, 0.5)",
+      base: "#e5a700",
+      top: "#f5c324",
+      front: "#ffd74a",
+      accent: "#b58100",
+      shadow: "rgba(180, 130, 0, 0.45)",
+      glow: "rgba(255, 215, 74, 0.3)",
     },
   },
   {
-    name: "Neon Blue",
-    value: "neon-blue",
+    name: "Windows 11 Cobalt",
+    value: "win11-cobalt",
+    category: "windows",
     colors: {
-      base: "#0284c7",
-      top: "#22d3ee",
-      shadow: "rgba(34, 211, 238, 0.6)",
+      base: "#0f52ba",
+      top: "#1966d2",
+      front: "#2979ff",
+      accent: "#0b3c8a",
+      shadow: "rgba(15, 82, 186, 0.45)",
+      glow: "rgba(41, 121, 255, 0.3)",
+    },
+  },
+  {
+    name: "Windows 11 Dark",
+    value: "win11-dark",
+    category: "windows",
+    colors: {
+      base: "#1a1f2c",
+      top: "#242b3d",
+      front: "#313a52",
+      accent: "#4d5b7c",
+      shadow: "rgba(0, 0, 0, 0.6)",
+      glow: "rgba(77, 91, 124, 0.2)",
+    },
+  },
+
+  // macOS Styles
+  {
+    name: "macOS Sky Blue",
+    value: "macos-blue",
+    category: "macos",
+    colors: {
+      base: "#0288d1",
+      top: "#29b6f6",
+      front: "#4fc3f7",
+      accent: "#01579b",
+      shadow: "rgba(2, 136, 209, 0.4)",
+      glow: "rgba(41, 182, 246, 0.3)",
+    },
+  },
+  {
+    name: "macOS Graphite",
+    value: "macos-graphite",
+    category: "macos",
+    colors: {
+      base: "#374151",
+      top: "#4b5563",
+      front: "#6b7280",
+      accent: "#1f2937",
+      shadow: "rgba(0, 0, 0, 0.5)",
+      glow: "rgba(107, 114, 128, 0.2)",
+    },
+  },
+
+  // Neon & Cyberpunk
+  {
+    name: "Cyberpunk Cyan",
+    value: "neon-cyan",
+    category: "neon",
+    colors: {
+      base: "#083344",
+      top: "#0e7490",
+      front: "#06b6d4",
+      accent: "#22d3ee",
+      shadow: "rgba(6, 182, 212, 0.55)",
+      glow: "rgba(34, 211, 238, 0.8)",
     },
   },
   {
     name: "Neon Purple",
     value: "neon-purple",
+    category: "neon",
     colors: {
-      base: "#7c3aed",
-      top: "#a78bfa",
-      shadow: "rgba(168, 85, 247, 0.6)",
+      base: "#3b0764",
+      top: "#7e22ce",
+      front: "#a855f7",
+      accent: "#c084fc",
+      shadow: "rgba(168, 85, 247, 0.55)",
+      glow: "rgba(192, 132, 252, 0.8)",
     },
   },
   {
     name: "Neon Pink",
     value: "neon-pink",
+    category: "neon",
     colors: {
-      base: "#db2777",
-      top: "#ec4899",
-      shadow: "rgba(236, 72, 153, 0.6)",
+      base: "#500724",
+      top: "#be185d",
+      front: "#ec4899",
+      accent: "#f472b6",
+      shadow: "rgba(236, 72, 153, 0.55)",
+      glow: "rgba(244, 114, 182, 0.8)",
     },
   },
   {
-    name: "Glass",
-    value: "glass",
+    name: "Vaporwave Sunset",
+    value: "vaporwave",
+    category: "neon",
     colors: {
-      base: "rgba(255, 255, 255, 0.1)",
-      top: "rgba(255, 255, 255, 0.2)",
-      shadow: "rgba(255, 255, 255, 0.1)",
+      base: "#c026d3",
+      top: "#f43f5e",
+      front: "#fb923c",
+      accent: "#fde047",
+      shadow: "rgba(244, 63, 94, 0.5)",
+      glow: "rgba(251, 146, 60, 0.7)",
     },
   },
-  {
-    name: "Matte Dark",
-    value: "matte-dark",
-    colors: {
-      base: "#1f2937",
-      top: "#374151",
-      shadow: "rgba(0, 0, 0, 0.5)",
-    },
-  },
-  {
-    name: "Gradient Sunset",
-    value: "gradient-sunset",
-    colors: {
-      base: "#f97316",
-      top: "#fbbf24",
-      shadow: "rgba(249, 115, 22, 0.6)",
-    },
-  },
-  {
-    name: "Gradient Ocean",
-    value: "gradient-ocean",
-    colors: {
-      base: "#0891b2",
-      top: "#06b6d4",
-      shadow: "rgba(8, 145, 178, 0.6)",
-    },
-  },
-];
 
-/**
- * Anime-themed folder styles
- */
-export const ANIME_STYLES: FolderStyle[] = [
+  // Film & Media Poster Styles
+  {
+    name: "Netflix Crimson",
+    value: "netflix-red",
+    category: "film",
+    colors: {
+      base: "#450a0a",
+      top: "#991b1b",
+      front: "#dc2626",
+      accent: "#ef4444",
+      shadow: "rgba(220, 38, 38, 0.55)",
+      glow: "rgba(239, 68, 68, 0.5)",
+    },
+  },
+  {
+    name: "Film Noir Gold",
+    value: "film-gold",
+    category: "film",
+    colors: {
+      base: "#1c1917",
+      top: "#78350f",
+      front: "#d97706",
+      accent: "#fbbf24",
+      shadow: "rgba(217, 119, 6, 0.45)",
+      glow: "rgba(251, 191, 36, 0.4)",
+    },
+  },
+  {
+    name: "Emerald Cinema",
+    value: "emerald-cinema",
+    category: "film",
+    colors: {
+      base: "#022c22",
+      top: "#065f46",
+      front: "#059669",
+      accent: "#34d399",
+      shadow: "rgba(5, 150, 105, 0.5)",
+      glow: "rgba(52, 211, 153, 0.5)",
+    },
+  },
+
+  // Anime Styles
   {
     name: "Anime Sakura",
     value: "anime-sakura",
+    category: "anime",
     colors: {
-      base: "#ff6b9d",
-      top: "#ffa6c9",
-      shadow: "rgba(255, 107, 157, 0.6)",
-    },
-  },
-  {
-    name: "Anime Blue",
-    value: "anime-blue",
-    colors: {
-      base: "#1e40af",
-      top: "#3b82f6",
-      shadow: "rgba(59, 130, 246, 0.6)",
-    },
-  },
-  {
-    name: "Anime Gold",
-    value: "anime-gold",
-    colors: {
-      base: "#d97706",
-      top: "#fbbf24",
-      shadow: "rgba(251, 191, 36, 0.6)",
+      base: "#831843",
+      top: "#db2777",
+      front: "#f472b6",
+      accent: "#fbcfe8",
+      shadow: "rgba(244, 114, 182, 0.5)",
+      glow: "rgba(251, 207, 232, 0.6)",
     },
   },
   {
     name: "Anime Violet",
     value: "anime-violet",
+    category: "anime",
     colors: {
-      base: "#6b21a8",
-      top: "#a855f7",
-      shadow: "rgba(168, 85, 247, 0.6)",
+      base: "#4c1d95",
+      top: "#6d28d9",
+      front: "#8b5cf6",
+      accent: "#ddd6fe",
+      shadow: "rgba(139, 92, 246, 0.5)",
+      glow: "rgba(221, 214, 254, 0.6)",
+    },
+  },
+
+  // Minimal / Clean
+  {
+    name: "Clean Slate",
+    value: "clean-slate",
+    category: "minimal",
+    colors: {
+      base: "#1e293b",
+      top: "#334155",
+      front: "#475569",
+      accent: "#94a3b8",
+      shadow: "rgba(0, 0, 0, 0.4)",
+      glow: "rgba(148, 163, 184, 0.2)",
     },
   },
   {
-    name: "Anime Crimson",
-    value: "anime-crimson",
+    name: "Pure Orange",
+    value: "pure-orange",
+    category: "minimal",
     colors: {
-      base: "#991b1b",
-      top: "#dc2626",
-      shadow: "rgba(220, 38, 38, 0.6)",
-    },
-  },
-  {
-    name: "Anime Emerald",
-    value: "anime-emerald",
-    colors: {
-      base: "#047857",
-      top: "#10b981",
-      shadow: "rgba(16, 185, 129, 0.6)",
+      base: "#7c2d12",
+      top: "#c2410c",
+      front: "#ea580c",
+      accent: "#fdba74",
+      shadow: "rgba(234, 88, 12, 0.45)",
+      glow: "rgba(253, 186, 116, 0.4)",
     },
   },
 ];
 
-/**
- * Film-themed folder styles
- */
-export const FILM_STYLES: FolderStyle[] = [
-  {
-    name: "Film Noir",
-    value: "film-noir",
-    colors: {
-      base: "#000000",
-      top: "#1f1f1f",
-      shadow: "rgba(0, 0, 0, 0.8)",
-    },
-  },
-  {
-    name: "Film Sepia",
-    value: "film-sepia",
-    colors: {
-      base: "#704214",
-      top: "#92400e",
-      shadow: "rgba(112, 66, 20, 0.6)",
-    },
-  },
-  {
-    name: "Film Hollywood",
-    value: "film-hollywood",
-    colors: {
-      base: "#b91c1c",
-      top: "#ef4444",
-      shadow: "rgba(239, 68, 68, 0.6)",
-    },
-  },
-  {
-    name: "Film Retro",
-    value: "film-retro",
-    colors: {
-      base: "#0e7490",
-      top: "#06b6d4",
-      shadow: "rgba(6, 182, 212, 0.6)",
-    },
-  },
-  {
-    name: "Film Purple",
-    value: "film-purple",
-    colors: {
-      base: "#581c87",
-      top: "#9333ea",
-      shadow: "rgba(147, 51, 234, 0.6)",
-    },
-  },
-  {
-    name: "Film Gold",
-    value: "film-gold",
-    colors: {
-      base: "#a16207",
-      top: "#eab308",
-      shadow: "rgba(234, 179, 8, 0.6)",
-    },
-  },
-];
-
-/**
- * All folder styles combined
- */
-export const FOLDER_STYLES: FolderStyle[] = [
-  ...MODERN_NEON_STYLES,
-  ...ANIME_STYLES,
-  ...FILM_STYLES,
-];
+export const MODERN_NEON_STYLES = FOLDER_STYLES.filter(
+  (s) => s.category === 'windows' || s.category === 'neon'
+);
+export const ANIME_STYLES = FOLDER_STYLES.filter((s) => s.category === 'anime');
+export const FILM_STYLES = FOLDER_STYLES.filter((s) => s.category === 'film');
 
 /**
  * Font weight options
  */
 export const FONT_WEIGHTS: FontWeight[] = [
-  { name: "Light", value: "300" },
-  { name: "Regular", value: "400" },
+  { name: "Normal", value: "400" },
   { name: "Medium", value: "500" },
   { name: "Semi Bold", value: "600" },
   { name: "Bold", value: "700" },
   { name: "Extra Bold", value: "800" },
+  { name: "Black", value: "900" },
 ];
 
 /**
- * Export size options
+ * Standard Export Sizes
  */
 export const EXPORT_SIZES: ExportSize[] = [
-  { name: "Small (128x128)", value: 128 },
-  { name: "Medium (256x256)", value: 256 },
-  { name: "Large (512x512)", value: 512 },
-  { name: "Extra Large (1024x1024)", value: 1024 },
+  { name: "16x16 (Taskbar)", value: 16 },
+  { name: "32x32 (Small)", value: 32 },
+  { name: "48x48 (Desktop)", value: 48 },
+  { name: "64x64 (Medium)", value: 64 },
+  { name: "128x128 (Large)", value: 128 },
+  { name: "256x256 (Jumbo)", value: 256 },
+  { name: "512x512 (HD PNG)", value: 512 },
+  { name: "1024x1024 (Ultra HD)", value: 1024 },
 ];

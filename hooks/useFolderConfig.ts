@@ -3,50 +3,182 @@
  */
 
 import { useState, useCallback } from 'react';
-import { FolderStyle, FolderConfig, ExportFormat } from '@/types/folder';
-import { DEFAULTS } from '@/constants/defaults';
+import {
+  FolderConfig,
+  FolderStyle,
+  FolderTemplate,
+  ImagePlacement,
+  TabPosition,
+  LabelPosition,
+  ExportFormat,
+  ImageAdjustments,
+  EmblemConfig,
+  FolderEffects,
+} from '@/types/folder';
+import { DEFAULT_FOLDER_CONFIG } from '@/constants/defaults';
 import { FOLDER_STYLES } from '@/constants/styles';
+import { EMBLEMS } from '@/lib/canvas/emblems';
 
 export function useFolderConfig() {
-  const [title, setTitle] = useState<string>(DEFAULTS.TITLE);
-  const [selectedStyle, setSelectedStyle] = useState<FolderStyle>(DEFAULTS.STYLE);
-  const [fontWeight, setFontWeight] = useState<string>(DEFAULTS.FONT_WEIGHT);
-  const [titleBgColor, setTitleBgColor] = useState<string>(DEFAULTS.TITLE_BG_COLOR);
-  const [titleTextColor, setTitleTextColor] = useState<string>(DEFAULTS.TITLE_TEXT_COLOR);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>(DEFAULTS.EXPORT_FORMAT);
+  const [config, setConfig] = useState<FolderConfig>({ ...DEFAULT_FOLDER_CONFIG });
 
-  const handleStyleChange = useCallback((styleValue: string) => {
+  const setTemplate = useCallback((template: FolderTemplate) => {
+    setConfig((prev) => ({
+      ...prev,
+      template,
+      effects: {
+        ...prev.effects,
+        neonGlow: template === 'neon',
+        paperPeek: template === 'windows11',
+      },
+    }));
+  }, []);
+
+  const setStyle = useCallback((styleValue: string) => {
     const style = FOLDER_STYLES.find((s) => s.value === styleValue);
     if (style) {
-      setSelectedStyle(style);
-      setTitleBgColor(style.colors.base);
+      setConfig((prev) => ({
+        ...prev,
+        style,
+        titleBgColor: style.colors.base,
+      }));
     }
   }, []);
 
-  const config: FolderConfig = {
-    image: null, // Image is managed separately via useImageUpload
-    title,
-    style: selectedStyle,
-    fontWeight,
-    titleBgColor,
-    titleTextColor,
-    exportFormat,
-  };
+  const setCustomColors = useCallback((colors: Partial<FolderStyle['colors']>) => {
+    setConfig((prev) => ({
+      ...prev,
+      style: {
+        ...prev.style,
+        colors: {
+          ...prev.style.colors,
+          ...colors,
+        },
+      },
+    }));
+  }, []);
+
+  const setTitle = useCallback((title: string) => {
+    setConfig((prev) => ({ ...prev, title }));
+  }, []);
+
+  const setLabelPosition = useCallback((labelPosition: LabelPosition) => {
+    setConfig((prev) => ({ ...prev, labelPosition }));
+  }, []);
+
+  const setFontWeight = useCallback((fontWeight: string) => {
+    setConfig((prev) => ({ ...prev, fontWeight }));
+  }, []);
+
+  const setTitleTextColor = useCallback((titleTextColor: string) => {
+    setConfig((prev) => ({ ...prev, titleTextColor }));
+  }, []);
+
+  const setTitleBgColor = useCallback((titleBgColor: string) => {
+    setConfig((prev) => ({ ...prev, titleBgColor }));
+  }, []);
+
+  const setTabPosition = useCallback((tabPosition: TabPosition) => {
+    setConfig((prev) => ({ ...prev, tabPosition }));
+  }, []);
+
+  const setImagePlacement = useCallback((imagePlacement: ImagePlacement) => {
+    setConfig((prev) => ({ ...prev, imagePlacement }));
+  }, []);
+
+  const updateImageAdjustments = useCallback(
+    (adjustments: Partial<ImageAdjustments>) => {
+      setConfig((prev) => ({
+        ...prev,
+        imageAdjustments: {
+          ...prev.imageAdjustments,
+          ...adjustments,
+        },
+      }));
+    },
+    []
+  );
+
+  const updateEmblem = useCallback((emblemUpdates: Partial<EmblemConfig>) => {
+    setConfig((prev) => ({
+      ...prev,
+      emblem: {
+        ...prev.emblem,
+        ...emblemUpdates,
+      },
+    }));
+  }, []);
+
+  const updateEffects = useCallback((effectsUpdates: Partial<FolderEffects>) => {
+    setConfig((prev) => ({
+      ...prev,
+      effects: {
+        ...prev.effects,
+        ...effectsUpdates,
+      },
+    }));
+  }, []);
+
+  const setExportFormat = useCallback((exportFormat: ExportFormat) => {
+    setConfig((prev) => ({ ...prev, exportFormat }));
+  }, []);
+
+  const resetConfig = useCallback(() => {
+    setConfig({ ...DEFAULT_FOLDER_CONFIG });
+  }, []);
+
+  const randomize = useCallback(() => {
+    const randomStyle =
+      FOLDER_STYLES[Math.floor(Math.random() * FOLDER_STYLES.length)];
+    const templates: FolderTemplate[] = [
+      'windows11',
+      'poster',
+      'macos',
+      'neon',
+      'minimal',
+    ];
+    const randomTemplate =
+      templates[Math.floor(Math.random() * templates.length)];
+    const randomEmblem =
+      EMBLEMS[Math.floor(Math.random() * EMBLEMS.length)];
+
+    setConfig((prev) => ({
+      ...prev,
+      template: randomTemplate,
+      style: randomStyle,
+      titleBgColor: randomStyle.colors.base,
+      emblem: {
+        ...prev.emblem,
+        enabled: true,
+        icon: randomEmblem.id,
+        color: randomStyle.colors.accent,
+      },
+      effects: {
+        ...prev.effects,
+        neonGlow: randomTemplate === 'neon',
+        paperPeek: randomTemplate === 'windows11',
+      },
+    }));
+  }, []);
 
   return {
     config,
-    title,
-    selectedStyle,
-    fontWeight,
-    titleBgColor,
-    titleTextColor,
-    exportFormat,
+    setConfig,
+    setTemplate,
+    setStyle,
+    setCustomColors,
     setTitle,
-    setSelectedStyle,
+    setLabelPosition,
     setFontWeight,
-    setTitleBgColor,
     setTitleTextColor,
+    setTitleBgColor,
+    setTabPosition,
+    setImagePlacement,
+    updateImageAdjustments,
+    updateEmblem,
+    updateEffects,
     setExportFormat,
-    handleStyleChange,
+    resetConfig,
+    randomize,
   };
 }

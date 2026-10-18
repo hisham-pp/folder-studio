@@ -1,43 +1,54 @@
 /**
- * File saving utilities
+ * File saving utilities for Folder Studio
  */
 
 import { saveAs } from 'file-saver';
 import { ExportFormat } from '@/types/folder';
-import { canvasToICO } from './ico';
-import { canvasToPNG } from './png';
+import { canvasToMultiResolutionICO, canvasToICO } from './ico';
+import { canvasToPNGWithSize } from './png';
+import { canvasToICNS } from './icns';
 
 /**
- * Export canvas to file
+ * Clean title for filename usage
+ */
+export function sanitizeFilename(name: string): string {
+  const sanitized = name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+  return sanitized || 'folder-icon';
+}
+
+/**
+ * Export canvas to chosen format and size
  */
 export async function exportCanvas(
   canvas: HTMLCanvasElement,
   format: ExportFormat,
-  size: number
+  size: number = 256,
+  title: string = 'folder',
+  renderFn?: (targetCanvas: HTMLCanvasElement, targetSize: number) => void | Promise<void>
 ): Promise<void> {
-  // Create a temporary canvas with the desired export size
-  const exportCanvas = document.createElement('canvas');
-  exportCanvas.width = size;
-  exportCanvas.height = size;
-
-  const ctx = exportCanvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Failed to get canvas context');
-  }
-
-  // Draw the original canvas scaled to the export size
-  ctx.drawImage(canvas, 0, 0, size, size);
+  const safeName = sanitizeFilename(title);
 
   try {
     let blob: Blob;
     let filename: string;
 
-    if (format === 'ico') {
-      blob = await canvasToICO(exportCanvas, [size]);
-      filename = `folder-icon-${size}x${size}.ico`;
+    if (format === 'ico-bundle') {
+      // Standard Windows Multi-Resolution ICO Bundle (16, 24, 32, 48, 64, 128, 256)
+      blob = await canvasToMultiResolutionICO(canvas, undefined, renderFn);
+      filename = `${safeName}.ico`;
+    } else if (format === 'ico') {
+      // Single size ICO
+      const clampedSize = Math.min(256, Math.max(16, size));
+      blob = await canvasToICO(canvas, clampedSize);
+      filename = `${safeName}-${clampedSize}x${clampedSize}.ico`;
+    } else if (format === 'icns') {
+      // macOS Apple ICNS format
+      blob = await canvasToICNS(canvas);
+      filename = `${safeName}.icns`;
     } else {
-      blob = await canvasToPNG(exportCanvas);
-      filename = `folder-icon-${size}x${size}.png`;
+      // PNG format (supports 16 to 1024)
+      blob = await canvasToPNGWithSize(canvas, size);
+      filename = `${safeName}-${size}x${size}.png`;
     }
 
     saveAs(blob, filename);

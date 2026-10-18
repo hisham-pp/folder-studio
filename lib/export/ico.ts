@@ -1,138 +1,146 @@
 /**
- * ICO file format export utilities
+ * High-performance, standards-compliant ICO file generator
+ * Conforms to the Microsoft Windows Icon (.ICO) format specification.
+ * Supports multi-resolution mipmaps (16x16 up to 256x256) embedded in a single file,
+ * which is required for proper Windows folder icon customization.
  */
 
-/**
- * Image data for ICO file
- */
-interface ICOImage {
+export interface ICOImage {
   size: number;
   data: Uint8Array;
 }
 
 /**
- * Converts a canvas to ICO format
- * ICO files can contain multiple sizes of the same image
+ * Standard Windows icon sizes for complete shell integration
+ * (Desktop, Explorer large/medium/small/details, Start menu, taskbar)
  */
-export async function canvasToICO(
+export const WINDOWS_STANDARD_ICO_SIZES = [256, 128, 64, 48, 32, 24, 16] as const;
+
+/**
+ * Converts a canvas into a multi-resolution Windows ICO Blob.
+ * If a custom renderFn is provided, each resolution is rendered natively
+ * at that resolution for pixel-perfect sharpness. Otherwise, canvas is downscaled.
+ */
+export async function canvasToMultiResolutionICO(
   canvas: HTMLCanvasElement,
-  sizes: number[] = [256]
+  sizes: number[] = [...WINDOWS_STANDARD_ICO_SIZES],
+  renderFn?: (targetCanvas: HTMLCanvasElement, size: number) => void | Promise<void>
 ): Promise<Blob> {
   const images: ICOImage[] = [];
 
-  // Generate images for each size
-  for (const size of sizes) {
+  // Sort descending by size (256 down to 16) - standard practice for Windows ICO
+  const sortedSizes = [...sizes].filter((s) => s <= 256).sort((a, b) => b - a);
+
+  for (const size of sortedSizes) {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = size;
     tempCanvas.height = size;
     const ctx = tempCanvas.getContext('2d');
     if (!ctx) continue;
 
-    // Draw scaled image
-    ctx.drawImage(canvas, 0, 0, size, size);
+    // Enable high-quality downsampling
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
-    // Get PNG data
-    const blob = await new Promise<Blob>((resolve) => {
-      tempCanvas.toBlob((b) => resolve(b!), 'image/png');
+    if (renderFn) {
+      await renderFn(tempCanvas, size);
+    } else {
+      ctx.drawImage(canvas, 0, 0, size, size);
+    }
+
+    const pngBlob = await new Promise<Blob | null>((resolve) => {
+      tempCanvas.toBlob((b) => resolve(b), 'image/png');
     });
-    const arrayBuffer = await blob.arrayBuffer();
+
+    if (!pngBlob) continue;
+
+    const arrayBuffer = await pngBlob.arrayBuffer();
     const pngData = new Uint8Array(arrayBuffer);
 
     images.push({ size, data: pngData });
   }
 
-  // Create ICO file structure
+  if (images.length === 0) {
+    throw new Error('Failed to generate any images for ICO');
+  }
+
   const icoData = createICOFile(images);
-  return new Blob([new Uint8Array(icoData)], { type: 'image/x-icon' });
+  return new Blob([icoData as BlobPart], { type: 'image/x-icon' });
 }
 
 /**
- * Creates an ICO file from multiple PNG images
+ * Converts a canvas to a single-resolution ICO file
  */
-function createICOFile(images: ICOImage[]): Uint8Array {
+export async function canvasToICO(
+  canvas: HTMLCanvasElement,
+  size: number = 256
+): Promise<Blob> {
+  const clampedSize = Math.min(256, Math.max(16, size));
+  return canvasToMultiResolutionICO(canvas, [clampedSize]);
+}
+
+/**
+ * Builds the binary ICO file buffer from an array of PNG images
+ *
+ * Structure:
+ * - ICONDIR (6 bytes):
+ *     - reserved (WORD, 2 bytes) = 0
+ *     - type (WORD, 2 bytes) = 1 (1 = icon, 2 = cursor)
+ *     - count (WORD, 2 bytes) = number of images
+ * - ICONDIRENTRY (16 bytes per image):
+ *     - width (BYTE, 1 byte) = 0 for 256px
+ *     - height (BYTE, 1 byte) = 0 for 256px
+ *     - colorCount (BYTE, 1 byte) = 0
+ *     - reserved (BYTE, 1 byte) = 0
+ *     - planes (WORD, 2 bytes) = 1
+ *     - bitCount (WORD, 2 bytes) = 32
+ *     - bytesInRes (DWORD, 4 bytes) = size of image data
+ *     - imageOffset (DWORD, 4 bytes) = offset from file start
+ * - IMAGE DATA (PNG streams)
+ */
+export function createICOFile(images: ICOImage[]): Uint8Array {
   const HEADER_SIZE = 6;
   const DIR_ENTRY_SIZE = 16;
   const totalDirSize = HEADER_SIZE + images.length * DIR_ENTRY_SIZE;
 
   // Calculate total file size
-  let totalSize = totalDirSize;
+  let totalDataSize = 0;
   for (const img of images) {
-    totalSize += img.data.length;
+    totalDataSize += img.data.length;
   }
 
-  const icoFile = new Uint8Array(totalSize);
-  let offset = 0;
+  const buffer = new ArrayBuffer(totalDirSize + totalDataSize);
+  const view = new DataView(buffer);
+  const byteBuffer = new Uint8Array(buffer);
 
-  // Write ICO header (6 bytes)
-  offset = writeICOHeader(icoFile, offset, images.length);
+  // Write ICONDIR Header
+  view.setUint16(0, 0, true);              // Reserved
+  view.setUint16(2, 1, true);              // Type: 1 = ICO
+  view.setUint16(4, images.length, true);  // Number of images
 
-  // Write directory entries
-  let imageDataOffset = totalDirSize;
-  for (const img of images) {
-    offset = writeDirectoryEntry(icoFile, offset, img, imageDataOffset);
-    imageDataOffset += img.data.length;
+  // Write ICONDIRENTRY list
+  let currentOffset = totalDirSize;
+  for (let i = 0; i < images.length; i++) {
+    const img = images[i];
+    const entryOffset = HEADER_SIZE + i * DIR_ENTRY_SIZE;
+
+    // In ICO specification: 0 means 256px
+    const widthByte = img.size >= 256 ? 0 : img.size;
+    const heightByte = img.size >= 256 ? 0 : img.size;
+
+    view.setUint8(entryOffset + 0, widthByte);        // Width
+    view.setUint8(entryOffset + 1, heightByte);       // Height
+    view.setUint8(entryOffset + 2, 0);                // Color count (0 = no palette)
+    view.setUint8(entryOffset + 3, 0);                // Reserved
+    view.setUint16(entryOffset + 4, 1, true);         // Color planes (1)
+    view.setUint16(entryOffset + 6, 32, true);        // Bits per pixel (32-bit RGBA)
+    view.setUint32(entryOffset + 8, img.data.length, true); // Size of image data
+    view.setUint32(entryOffset + 12, currentOffset, true);  // Image data offset
+
+    // Copy PNG image data into place
+    byteBuffer.set(img.data, currentOffset);
+    currentOffset += img.data.length;
   }
 
-  // Write image data
-  for (const img of images) {
-    icoFile.set(img.data, offset);
-    offset += img.data.length;
-  }
-
-  return icoFile;
-}
-
-/**
- * Write ICO file header
- */
-function writeICOHeader(
-  buffer: Uint8Array,
-  offset: number,
-  imageCount: number
-): number {
-  buffer[offset++] = 0; // Reserved
-  buffer[offset++] = 0; // Reserved
-  buffer[offset++] = 1; // Type: 1 = ICO
-  buffer[offset++] = 0; // Type (continued)
-  buffer[offset++] = imageCount & 0xff; // Number of images (low byte)
-  buffer[offset++] = (imageCount >> 8) & 0xff; // Number of images (high byte)
-  return offset;
-}
-
-/**
- * Write directory entry for an image
- */
-function writeDirectoryEntry(
-  buffer: Uint8Array,
-  offset: number,
-  image: ICOImage,
-  dataOffset: number
-): number {
-  // Width and height (0 means 256)
-  const width = image.size === 256 ? 0 : image.size;
-  const height = image.size === 256 ? 0 : image.size;
-
-  buffer[offset++] = width & 0xff; // Width
-  buffer[offset++] = height & 0xff; // Height
-  buffer[offset++] = 0; // Color palette (0 for PNG)
-  buffer[offset++] = 0; // Reserved
-  buffer[offset++] = 1; // Color planes (low byte)
-  buffer[offset++] = 0; // Color planes (high byte)
-  buffer[offset++] = 32; // Bits per pixel (low byte)
-  buffer[offset++] = 0; // Bits per pixel (high byte)
-
-  // Image size (4 bytes, little-endian)
-  const imageSize = image.data.length;
-  buffer[offset++] = imageSize & 0xff;
-  buffer[offset++] = (imageSize >> 8) & 0xff;
-  buffer[offset++] = (imageSize >> 16) & 0xff;
-  buffer[offset++] = (imageSize >> 24) & 0xff;
-
-  // Image offset (4 bytes, little-endian)
-  buffer[offset++] = dataOffset & 0xff;
-  buffer[offset++] = (dataOffset >> 8) & 0xff;
-  buffer[offset++] = (dataOffset >> 16) & 0xff;
-  buffer[offset++] = (dataOffset >> 24) & 0xff;
-
-  return offset;
+  return byteBuffer;
 }

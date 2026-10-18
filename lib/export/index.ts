@@ -1,8 +1,4 @@
-/**
- * Export utilities
- */
-
-export { canvasToICO } from './ico';
-export { canvasToPNG, canvasToPNGWithSize } from './png';
-
+export * from './ico';
+export * from './png';
+export * from './icns';
 export * from './saver';
