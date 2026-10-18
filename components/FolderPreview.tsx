@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { FolderConfig } from "@/types/folder";
+import { useState, useCallback } from "react";
+import { FolderConfig, ExportFormat } from "@/types/folder";
 import { useFolderCanvas } from "@/hooks/useFolderCanvas";
 
 interface FolderPreviewProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   config: FolderConfig;
   onOpenGuide: () => void;
+  onFileDrop: (file: File) => void;
+  onQuickExport: (format: ExportFormat, size?: number) => void;
+  onShowToast: (text: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
 type PreviewTab = 'canvas' | 'desktop' | 'explorer' | 'grid';
@@ -17,10 +20,15 @@ export default function FolderPreview({
   canvasRef,
   config,
   onOpenGuide,
+  onFileDrop,
+  onQuickExport,
+  onShowToast,
 }: FolderPreviewProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('canvas');
   const [bgTheme, setBgTheme] = useState<BackgroundTheme>('dark');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
+  const [isCopying, setIsCopying] = useState<boolean>(false);
 
   // Sync canvas with state
   useFolderCanvas(config, canvasRef, 512);
@@ -28,7 +36,7 @@ export default function FolderPreview({
   const getBackgroundClass = () => {
     switch (bgTheme) {
       case 'transparent':
-        return 'bg-[linear-gradient(45deg,#1f2937_25%,transparent_25%),linear-gradient(-45deg,#1f2937_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1f2937_75%),linear-gradient(-45deg,transparent_75%,#1f2937_75%)] bg-[size:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0] bg-gray-900';
+        return 'bg-[linear-gradient(45deg,#1f2937_25%,transparent_25%),linear-gradient(-45deg,#1f2937_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1f2937_75%),linear-gradient(-45deg,transparent_75%,#1f2937_75%)] bg-[size:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0] bg-gray-950';
       case 'win11':
         return 'bg-gradient-to-tr from-[#003865] via-[#0575E6] to-[#00F260]';
       case 'light':
@@ -39,17 +47,73 @@ export default function FolderPreview({
     }
   };
 
+  // Drag & drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDraggingOver(false);
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        onFileDrop(file);
+        onShowToast(`Loaded image "${file.name}"`, 'success');
+      }
+    },
+    [onFileDrop, onShowToast]
+  );
+
+  // Copy PNG to clipboard
+  const handleCopyClipboard = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    setIsCopying(true);
+    try {
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob }),
+          ]);
+          onShowToast('Copied PNG icon to clipboard!', 'success');
+        } catch {
+          onShowToast('Clipboard copy not supported in this browser context', 'warning');
+        } finally {
+          setIsCopying(false);
+        }
+      }, 'image/png');
+    } catch {
+      setIsCopying(false);
+    }
+  }, [canvasRef, onShowToast]);
+
   return (
-    <div className="bg-gradient-to-br from-gray-900/90 to-gray-950/90 backdrop-blur-xl rounded-2xl p-5 sm:p-6 border border-gray-800 shadow-2xl space-y-4">
+    <div className="bg-gradient-to-br from-gray-900/95 to-gray-950/95 backdrop-blur-2xl rounded-2xl p-5 sm:p-6 border border-gray-800/80 shadow-2xl space-y-4 relative">
       {/* Top Bar with Title and Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-800/80">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Live Preview
-          </h2>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
-            Real-time
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center text-white text-sm shadow-md shadow-cyan-500/20">
+            📁
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              Preview Studio
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            </h2>
+            <p className="text-[11px] text-gray-400">Drag & drop images anywhere on canvas</p>
           </div>
         </div>
 
@@ -93,18 +157,34 @@ export default function FolderPreview({
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            📏 All Sizes
+            📏 Mipmaps
           </button>
         </div>
       </div>
 
-      {/* Main Preview Screen */}
+      {/* Main Preview Screen with Dropzone */}
       <div
-        className={`relative rounded-xl min-h-[460px] flex items-center justify-center overflow-hidden border border-gray-800 transition-all duration-300 ${getBackgroundClass()}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative rounded-xl min-h-[480px] flex items-center justify-center overflow-hidden border transition-all duration-300 ${
+          isDraggingOver
+            ? 'border-cyan-400 ring-4 ring-cyan-400/30 scale-[0.99]'
+            : 'border-gray-800'
+        } ${getBackgroundClass()}`}
       >
+        {/* Drop Overlay */}
+        {isDraggingOver && (
+          <div className="absolute inset-0 z-30 bg-cyan-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center text-cyan-200 border-2 border-dashed border-cyan-400 rounded-xl animate-fadeIn">
+            <div className="text-5xl mb-3 animate-bounce">📥</div>
+            <div className="text-lg font-bold text-white">Drop Image to Apply</div>
+            <div className="text-xs text-cyan-300/80 mt-1">PNG, JPG, WebP, or SVG</div>
+          </div>
+        )}
+
         {/* Tab 1: Clean Canvas View */}
         {activeTab === 'canvas' && (
-          <div className="flex flex-col items-center justify-center p-6 w-full h-full">
+          <div className="flex flex-col items-center justify-center p-6 w-full h-full relative">
             <div
               style={{
                 transform: `scale(${zoomLevel / 100})`,
@@ -113,7 +193,7 @@ export default function FolderPreview({
             >
               <canvas
                 ref={canvasRef}
-                className="max-w-[340px] sm:max-w-[400px] h-auto drop-shadow-[0_20px_35px_rgba(0,0,0,0.6)]"
+                className="max-w-[340px] sm:max-w-[420px] h-auto drop-shadow-[0_20px_40px_rgba(0,0,0,0.65)]"
               />
             </div>
           </div>
@@ -121,14 +201,12 @@ export default function FolderPreview({
 
         {/* Tab 2: Windows 11 Desktop Mockup */}
         {activeTab === 'desktop' && (
-          <div className="relative w-full h-[460px] bg-cover bg-center p-6 flex flex-col justify-between select-none">
-            {/* Desktop Wallpaper simulated with vibrant Bloom backdrop */}
+          <div className="relative w-full h-[480px] p-6 flex flex-col justify-between select-none">
             <div className="absolute inset-0 bg-gradient-to-tr from-[#002244] via-[#094074] to-[#1d2d44] opacity-90"></div>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(65,105,225,0.4),transparent_60%)]"></div>
 
             {/* Desktop Icons Grid */}
             <div className="relative z-10 grid grid-cols-2 gap-6 w-fit text-center text-xs text-white drop-shadow-md">
-              {/* Standard Recycle Bin */}
               <div className="w-20 p-2 rounded-lg hover:bg-white/10 flex flex-col items-center gap-1.5 cursor-pointer transition-colors">
                 <div className="w-12 h-12 flex items-center justify-center text-2xl">
                   🗑️
@@ -137,7 +215,7 @@ export default function FolderPreview({
               </div>
 
               {/* USER'S CUSTOM FOLDER ICON */}
-              <div className="w-20 p-2 rounded-lg bg-blue-500/20 border border-blue-400/40 ring-2 ring-blue-400/30 flex flex-col items-center gap-1.5 cursor-pointer shadow-lg animate-pulse">
+              <div className="w-20 p-2 rounded-lg bg-blue-500/25 border border-blue-400/50 ring-2 ring-blue-400/40 flex flex-col items-center gap-1.5 cursor-pointer shadow-lg animate-pulse">
                 <div className="w-12 h-12 flex items-center justify-center">
                   <MockupFolderIcon canvasRef={canvasRef} size={48} />
                 </div>
@@ -146,7 +224,6 @@ export default function FolderPreview({
                 </span>
               </div>
 
-              {/* Standard File */}
               <div className="w-20 p-2 rounded-lg hover:bg-white/10 flex flex-col items-center gap-1.5 cursor-pointer transition-colors">
                 <div className="w-12 h-12 flex items-center justify-center text-2xl">
                   📄
@@ -170,7 +247,7 @@ export default function FolderPreview({
 
         {/* Tab 3: Windows 11 Explorer Mockup */}
         {activeTab === 'explorer' && (
-          <div className="w-full h-[460px] bg-gray-900 border border-gray-700/60 flex flex-col text-xs text-gray-200 select-none">
+          <div className="w-full h-[480px] bg-gray-900 border border-gray-700/60 flex flex-col text-xs text-gray-200 select-none">
             {/* Explorer Header */}
             <div className="h-10 bg-gray-950 border-b border-gray-800 px-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -195,7 +272,6 @@ export default function FolderPreview({
 
             {/* Explorer Main Content */}
             <div className="flex-1 flex overflow-hidden">
-              {/* Sidebar */}
               <div className="w-36 bg-gray-950/60 border-r border-gray-800/80 p-3 space-y-2 text-gray-400 hidden sm:block">
                 <div className="font-semibold text-gray-300 text-[11px]">Quick access</div>
                 <div className="pl-2 space-y-1.5 text-[11px]">
@@ -206,9 +282,7 @@ export default function FolderPreview({
                 </div>
               </div>
 
-              {/* Files Grid */}
               <div className="flex-1 p-6 grid grid-cols-3 sm:grid-cols-4 gap-6 items-start overflow-y-auto">
-                {/* YOUR GENERATED FOLDER */}
                 <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-center cursor-pointer shadow-md">
                   <MockupFolderIcon canvasRef={canvasRef} size={64} />
                   <span className="font-semibold text-cyan-300 truncate max-w-[85px]">
@@ -216,7 +290,6 @@ export default function FolderPreview({
                   </span>
                 </div>
 
-                {/* Other standard items */}
                 <div className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-800/50 text-center cursor-pointer">
                   <div className="w-16 h-16 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-3xl">
                     📁
@@ -239,38 +312,29 @@ export default function FolderPreview({
         {activeTab === 'grid' && (
           <div className="w-full h-full p-6 flex flex-col justify-center items-center gap-6 overflow-y-auto">
             <div className="text-center">
-              <h3 className="text-sm font-semibold text-white">Multi-Resolution Mipmaps</h3>
+              <h3 className="text-sm font-semibold text-white">Windows ICO Mipmaps</h3>
               <p className="text-xs text-gray-400">
-                All 6 standard Windows icon resolutions packaged inside your .ico file
+                All 6 standard resolutions baked into your .ico file
               </p>
             </div>
 
             <div className="flex flex-wrap items-end justify-center gap-6 p-4 bg-gray-950/60 rounded-xl border border-gray-800">
-              {/* 256px */}
               <div className="flex flex-col items-center gap-2">
                 <MockupFolderIcon canvasRef={canvasRef} size={128} />
                 <span className="text-[11px] text-gray-400 font-mono">256x256 (Jumbo)</span>
               </div>
-
-              {/* 128px */}
               <div className="flex flex-col items-center gap-2">
                 <MockupFolderIcon canvasRef={canvasRef} size={64} />
                 <span className="text-[11px] text-gray-400 font-mono">128x128 (Large)</span>
               </div>
-
-              {/* 48px (Desktop standard) */}
               <div className="flex flex-col items-center gap-2">
                 <MockupFolderIcon canvasRef={canvasRef} size={48} />
                 <span className="text-[11px] text-cyan-400 font-mono font-semibold">48x48 (Desktop)</span>
               </div>
-
-              {/* 32px */}
               <div className="flex flex-col items-center gap-2">
                 <MockupFolderIcon canvasRef={canvasRef} size={32} />
                 <span className="text-[11px] text-gray-400 font-mono">32x32 (Small)</span>
               </div>
-
-              {/* 16px */}
               <div className="flex flex-col items-center gap-2">
                 <MockupFolderIcon canvasRef={canvasRef} size={16} />
                 <span className="text-[11px] text-gray-400 font-mono">16x16 (List)</span>
@@ -280,36 +344,57 @@ export default function FolderPreview({
         )}
       </div>
 
-      {/* Bottom Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        {/* Background Selector & Zoom */}
+      {/* Quick Action Floating Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gray-950/70 rounded-xl border border-gray-800">
+        <div className="flex items-center gap-2">
+          {/* Quick Copy PNG */}
+          <button
+            onClick={handleCopyClipboard}
+            disabled={isCopying}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            title="Copy high-res PNG directly to your clipboard"
+          >
+            <span>📋</span> {isCopying ? 'Copying...' : 'Copy PNG'}
+          </button>
+
+          {/* Quick Download Windows ICO */}
+          <button
+            onClick={() => onQuickExport('ico-bundle')}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-md shadow-cyan-500/20 flex items-center gap-1.5 transition-all active:scale-95"
+            title="Download Windows Multi-Resolution .ico"
+          >
+            <span>⬇️</span> Download .ICO
+          </button>
+        </div>
+
+        {/* Backdrop Selector & Zoom */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-gray-400">
             <span>Backdrop:</span>
             <button
               onClick={() => setBgTheme('dark')}
-              className={`w-5 h-5 rounded-full bg-gray-950 border ${
+              className={`w-4 h-4 rounded-full bg-gray-950 border ${
                 bgTheme === 'dark' ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-gray-700'
               }`}
               title="Dark"
             />
             <button
               onClick={() => setBgTheme('win11')}
-              className={`w-5 h-5 rounded-full bg-blue-600 border ${
+              className={`w-4 h-4 rounded-full bg-blue-600 border ${
                 bgTheme === 'win11' ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-gray-700'
               }`}
               title="Windows 11 Bloom"
             />
             <button
               onClick={() => setBgTheme('transparent')}
-              className={`w-5 h-5 rounded-full bg-gray-700 border ${
+              className={`w-4 h-4 rounded-full bg-gray-700 border ${
                 bgTheme === 'transparent' ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-gray-700'
               }`}
               title="Checkerboard Transparent"
             />
             <button
               onClick={() => setBgTheme('light')}
-              className={`w-5 h-5 rounded-full bg-gray-200 border ${
+              className={`w-4 h-4 rounded-full bg-gray-200 border ${
                 bgTheme === 'light' ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-gray-700'
               }`}
               title="Light"
@@ -317,40 +402,41 @@ export default function FolderPreview({
           </div>
 
           {activeTab === 'canvas' && (
-            <div className="flex items-center gap-2 pl-3 border-l border-gray-800 text-xs text-gray-400">
-              <span>Zoom:</span>
+            <div className="flex items-center gap-1.5 pl-2 border-l border-gray-800 text-xs text-gray-400">
               <button
                 onClick={() => setZoomLevel(Math.max(60, zoomLevel - 20))}
-                className="w-6 h-6 rounded bg-gray-800 hover:bg-gray-700 text-gray-200"
+                className="w-5 h-5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center justify-center font-bold"
               >
                 -
               </button>
-              <span className="font-mono text-gray-300 w-8 text-center">{zoomLevel}%</span>
+              <span className="font-mono text-gray-300 w-8 text-center text-[11px]">{zoomLevel}%</span>
               <button
                 onClick={() => setZoomLevel(Math.min(180, zoomLevel + 20))}
-                className="w-6 h-6 rounded bg-gray-800 hover:bg-gray-700 text-gray-200"
+                className="w-5 h-5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center justify-center font-bold"
               >
                 +
               </button>
             </div>
           )}
         </div>
+      </div>
 
-        {/* How to Apply Guide Trigger */}
+      {/* Helper Footer Link */}
+      <div className="flex items-center justify-between text-xs text-gray-400 px-1">
+        <span className="text-[11px] text-gray-500">
+          💡 Tip: Press <kbd className="px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700 text-[10px]">Ctrl+V</kbd> anywhere to paste an image
+        </span>
         <button
           onClick={onOpenGuide}
-          className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition-colors underline"
+          className="font-medium text-cyan-400 hover:text-cyan-300 underline transition-colors"
         >
-          <span>📖</span> How to apply this icon to Windows/Mac folders
+          How to apply .ico on Windows
         </button>
       </div>
     </div>
   );
 }
 
-/**
- * Renders a scaled preview clone of the folder canvas
- */
 function MockupFolderIcon({
   canvasRef,
   size,
